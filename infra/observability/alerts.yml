@@ -1,0 +1,91 @@
+groups:
+  - name: amrutam-api-availability
+    rules:
+      - alert: AmrutamApiDown
+        expr: up{job="amrutam-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: Amrutam API is unavailable
+          description: Prometheus has been unable to scrape the API for more than two minutes.
+
+      - alert: AmrutamApiHighErrorRate
+        expr: |
+          sum(rate(amrutam_http_requests_total{job="amrutam-api",status=~"5.."}[5m]))
+            /
+          clamp_min(sum(rate(amrutam_http_requests_total{job="amrutam-api"}[5m])), 0.001) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: API 5xx response rate exceeds 1%
+          description: The API error budget is being consumed faster than expected.
+
+      - alert: AmrutamApiReadLatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(amrutam_http_request_duration_seconds_bucket{job="amrutam-api",method=~"GET|HEAD"}[5m])
+            )
+          ) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: API read p95 latency exceeds 200 ms
+          description: Read latency has exceeded the assignment SLO for ten minutes.
+
+      - alert: AmrutamApiWriteLatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (
+              rate(amrutam_http_request_duration_seconds_bucket{job="amrutam-api",method=~"POST|PUT|PATCH|DELETE"}[5m])
+            )
+          ) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: API write p95 latency exceeds 500 ms
+          description: Write latency has exceeded the assignment SLO for ten minutes.
+
+  - name: amrutam-runtime
+    rules:
+      - alert: AmrutamApiMemoryPressure
+        expr: amrutam_process_resident_memory_bytes{job="amrutam-api"} > 600 * 1024 * 1024
+        for: 10m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: API resident memory exceeds 600 MiB
+          description: Investigate traffic growth, heap pressure, or a memory leak.
+
+  - name: amrutam-outbox
+    rules:
+      - alert: AmrutamOutboxBacklog
+        expr: max(amrutam_outbox_events{job="amrutam-api",status="PENDING"}) > 100
+        for: 10m
+        labels:
+          severity: warning
+          service: worker
+        annotations:
+          summary: Outbox pending queue exceeds 100 events
+          description: The transactional outbox has remained backlogged for ten minutes; inspect worker health and downstream providers.
+
+      - alert: AmrutamOutboxDeadLetters
+        expr: max(amrutam_outbox_events{job="amrutam-api",status="DEAD_LETTER"}) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: worker
+        annotations:
+          summary: Outbox contains dead-letter events
+          description: One or more asynchronous jobs exhausted their retry budget and require operator review or replay.

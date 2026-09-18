@@ -1,0 +1,150 @@
+name: Release and deploy
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the published commit to the protected production environment
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  verify:
+    name: Verify release candidate
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    name: Publish immutable images
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      api_image: ${{ steps.names.outputs.api_image }}@${{ steps.build_api.outputs.digest }}
+      migration_image: ${{ steps.names.outputs.migration_image }}@${{ steps.build_migration.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Resolve lowercase immutable image names
+        id: names
+        shell: bash
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          echo "api_image=${repository}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "migration_image=${repository}-migrations:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish API image
+        id: build_api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          push: true
+          tags: ${{ steps.names.outputs.api_image }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and publish migration image
+        id: build_migration
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: migration
+          push: true
+          tags: ${{ steps.names.outputs.migration_image }}
+          provenance: mode=max
+          sbom: true
+          cache-from: type=gha
+
+      - name: Scan API image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.names.outputs.api_image }}@${{ steps.build_api.outputs.digest }}
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - name: Scan migration image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.names.outputs.migration_image }}@${{ steps.build_migration.outputs.digest }}
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: HIGH,CRITICAL
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Render immutable deployment manifests
+        shell: bash
+        env:
+          API_IMAGE: ${{ steps.names.outputs.api_image }}@${{ steps.build_api.outputs.digest }}
+          MIGRATION_IMAGE: ${{ steps.names.outputs.migration_image }}@${{ steps.build_migration.outputs.digest }}
+        run: |
+          sed -i "s|ghcr.io/amrutam/telemedicine-api:0.1.0|${API_IMAGE}|g" infra/k8s/*.yaml
+          sed -i "s|ghcr.io/amrutam/telemedicine-migrations:0.1.0|${MIGRATION_IMAGE}|g" infra/k8s/*.yaml
+          grep -Fq "image: ${API_IMAGE}" infra/k8s/api-deployment.yaml
+          grep -Fq "image: ${API_IMAGE}" infra/k8s/worker-deployment.yaml
+          grep -Fq "image: ${MIGRATION_IMAGE}" infra/k8s/migration-job.yaml
+          ! grep -R -E 'image: .*:0\.1\.0$' infra/k8s
+          kubectl kustomize infra/k8s > amrutam-release.yaml
+          grep -Fq "image: ${API_IMAGE}" amrutam-release.yaml
+          grep -Fq "image: ${MIGRATION_IMAGE}" amrutam-release.yaml
+
+      - name: Upload deployment manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: amrutam-release-${{ github.sha }}
+          path: amrutam-release.yaml
+          retention-days: 30
+
+  deploy:
+    name: Deploy production
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: amrutam-release-${{ github.sha }}
+
+      - uses: azure/setup-kubectl@v4
+
+      - name: Configure cluster access
+        shell: bash
+        env:
+          KUBE_CONFIG_DATA: ${{ secrets.KUBE_CONFIG_DATA }}
+        run: |
+          test -n "$KUBE_CONFIG_DATA"
+          mkdir -p "$HOME/.kube"
+          printf '%s' "$KUBE_CONFIG_DATA" | base64 --decode > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Apply migration and rollout
+        shell: bash
+        run: |
+          kubectl delete job amrutam-migrate -n amrutam --ignore-not-found
+          kubectl apply -f amrutam-release.yaml
+          kubectl wait --for=condition=complete job/amrutam-migrate -n amrutam --timeout=10m
+          kubectl rollout status deployment/amrutam-api -n amrutam --timeout=5m
+          kubectl rollout status deployment/amrutam-worker -n amrutam --timeout=5m

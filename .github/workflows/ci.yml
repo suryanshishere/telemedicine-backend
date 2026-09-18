@@ -1,0 +1,191 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  quality-and-tests:
+    name: Lint, test, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16.4-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: amrutam_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d amrutam_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/amrutam_test?schema=public
+      REDIS_URL: redis://127.0.0.1:6379/1
+      JWT_SECRET: ci-jwt-secret-that-is-at-least-sixty-four-characters-long-000001
+      JWT_ACCESS_TTL_SECONDS: '900'
+      REFRESH_TOKEN_TTL_DAYS: '30'
+      FIELD_ENCRYPTION_KEYS: v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      ACTIVE_FIELD_KEY_ID: v1
+      ALLOWED_ORIGINS: http://localhost:3001
+      RATE_LIMIT_MAX: '1000'
+      RATE_LIMIT_WINDOW_SECONDS: '60'
+      TRUST_PROXY_HOPS: '0'
+      OUTBOX_POLL_INTERVAL_MS: '100'
+      OUTBOX_MAX_ATTEMPTS: '8'
+      LOG_LEVEL: silent
+      OTEL_SDK_DISABLED: 'true'
+      RUN_E2E: 'true'
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Verify committed OpenAPI contract
+        run: |
+          npm run openapi:generate
+          git diff --exit-code -- openapi.json
+
+      - name: Apply test database migrations
+        run: npm run prisma:migrate
+
+      - name: Run unit tests with coverage
+        run: npm run test:cov
+
+      - name: Run end-to-end tests
+        run: npm run test:e2e
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  dependency-scan:
+    name: Dependency vulnerability scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install exact dependency tree
+        run: npm ci --ignore-scripts
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+  container-scan:
+    name: Build and scan container
+    needs: quality-and-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local scan image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runtime
+          load: true
+          push: false
+          tags: amrutam-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build database migration image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: migration
+          load: true
+          push: false
+          tags: amrutam-api:migration-ci
+          cache-from: type=gha
+
+      - name: Scan image for HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: amrutam-api:ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+
+      - name: Scan migration image for HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: amrutam-api:migration-ci
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: HIGH,CRITICAL

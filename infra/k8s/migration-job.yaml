@@ -1,0 +1,58 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: amrutam-migrate
+  namespace: amrutam
+  labels:
+    app.kubernetes.io/name: amrutam-migrate
+    app.kubernetes.io/component: migration
+    app.kubernetes.io/part-of: amrutam-telemedicine
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: amrutam-migrate
+        app.kubernetes.io/component: migration
+        app.kubernetes.io/part-of: amrutam-telemedicine
+    spec:
+      restartPolicy: Never
+      serviceAccountName: amrutam-api
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          # Built from Dockerfile target "migration"; the pipeline replaces this placeholder tag.
+          image: ghcr.io/amrutam/telemedicine-migrations:0.1.0
+          command: ['npm', 'run', 'prisma:migrate']
+          envFrom:
+            - configMapRef:
+                name: amrutam-config
+            - secretRef:
+                name: amrutam-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

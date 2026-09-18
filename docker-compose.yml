@@ -1,0 +1,216 @@
+name: amrutam-telemedicine
+
+x-app-environment: &app-environment
+  NODE_ENV: production
+  PORT: 3000
+  DATABASE_URL: postgresql://${POSTGRES_USER:-amrutam}:${POSTGRES_PASSWORD:-local-postgres-password}@postgres:5432/${POSTGRES_DB:-amrutam}?schema=public
+  REDIS_URL: redis://redis:6379/0
+  JWT_SECRET: ${JWT_SECRET:-local-jwt-secret-change-me-at-least-32-characters}
+  JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS:-900}
+  REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+  FIELD_ENCRYPTION_KEYS: ${FIELD_ENCRYPTION_KEYS:-v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+  ACTIVE_FIELD_KEY_ID: ${ACTIVE_FIELD_KEY_ID:-v1}
+  ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3001}
+  RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+  RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+  TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-0}
+  OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+  OUTBOX_MAX_ATTEMPTS: ${OUTBOX_MAX_ATTEMPTS:-8}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment=local,service.namespace=amrutam
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+x-app-service: &app-service
+  build:
+    context: .
+    target: runtime
+  image: amrutam-api:local
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  networks:
+    - backend
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    otel-collector:
+      condition: service_started
+    migrate:
+      condition: service_completed_successfully
+  stop_grace_period: 30s
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  api:
+    <<: *app-service
+    environment:
+      <<: *app-environment
+      PROCESS_ROLE: api
+      OTEL_SERVICE_NAME: amrutam-api
+    ports:
+      - '${API_PORT:-3000}:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health/ready >/dev/null || exit 1']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+
+  worker:
+    <<: *app-service
+    command: ['node', 'dist/worker.js']
+    environment:
+      <<: *app-environment
+      PROCESS_ROLE: worker
+      OTEL_SERVICE_NAME: amrutam-worker
+    healthcheck:
+      test: ['CMD-SHELL', 'node -e "process.kill(1, 0)"']
+      interval: 20s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  migrate:
+    build:
+      context: .
+      target: migration
+    image: amrutam-migrations:local
+    command: ['npm', 'run', 'prisma:migrate']
+    restart: 'no'
+    environment:
+      <<: *app-environment
+      PROCESS_ROLE: migration
+      OTEL_SERVICE_NAME: amrutam-migration
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  postgres:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-amrutam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-postgres-password}
+      POSTGRES_DB: ${POSTGRES_DB:-amrutam}
+    ports:
+      - '127.0.0.1:${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes', '--maxmemory-policy', 'noeviction']
+    ports:
+      - '127.0.0.1:${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    restart: unless-stopped
+    command: ['--config=/etc/otelcol-contrib/config.yaml']
+    volumes:
+      - ./infra/observability/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - '127.0.0.1:4317:4317'
+      - '127.0.0.1:4318:4318'
+      - '127.0.0.1:13133:13133'
+    depends_on:
+      jaeger:
+        condition: service_started
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/observability/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090'
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    image: grafana/grafana:11.2.2
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-local-grafana-password}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - '127.0.0.1:${GRAFANA_PORT:-3001}:3000'
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '127.0.0.1:${JAEGER_UI_PORT:-16686}:16686'
+    networks:
+      - backend
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  backend:
+    driver: bridge

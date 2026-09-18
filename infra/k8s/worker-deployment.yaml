@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amrutam-worker
+  namespace: amrutam
+  labels:
+    app.kubernetes.io/name: amrutam-worker
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: amrutam-telemedicine
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: amrutam-worker
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: amrutam-worker
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: amrutam-telemedicine
+    spec:
+      serviceAccountName: amrutam-api
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: wait-for-schema
+          image: ghcr.io/amrutam/telemedicine-api:0.1.0
+          command: ['node', 'dist/wait-for-schema.js']
+          envFrom:
+            - secretRef:
+                name: amrutam-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+      containers:
+        - name: worker
+          image: ghcr.io/amrutam/telemedicine-api:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: ['node', 'dist/worker.js']
+          envFrom:
+            - configMapRef:
+                name: amrutam-config
+            - secretRef:
+                name: amrutam-secrets
+          env:
+            - name: PROCESS_ROLE
+              value: worker
+            - name: OTEL_SERVICE_NAME
+              value: amrutam-worker
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 750m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ['ALL']
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            exec:
+              command: ['node', '-e', 'process.kill(1, 0)']
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command: ['/bin/sh', '-c', 'sleep 10']
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: amrutam-worker
+              app.kubernetes.io/component: worker

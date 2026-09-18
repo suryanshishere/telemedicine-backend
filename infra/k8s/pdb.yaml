@@ -1,0 +1,27 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: amrutam-api
+  namespace: amrutam
+  labels:
+    app.kubernetes.io/part-of: amrutam-telemedicine
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: amrutam-api
+      app.kubernetes.io/component: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: amrutam-worker
+  namespace: amrutam
+  labels:
+    app.kubernetes.io/part-of: amrutam-telemedicine
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: amrutam-worker
+      app.kubernetes.io/component: worker

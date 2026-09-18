@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: amrutam-config
+  namespace: amrutam
+  labels:
+    app.kubernetes.io/part-of: amrutam-telemedicine
+data:
+  NODE_ENV: production
+  PORT: '3000'
+  LOG_LEVEL: info
+  JWT_ACCESS_TTL_SECONDS: '900'
+  REFRESH_TOKEN_TTL_DAYS: '30'
+  ALLOWED_ORIGINS: https://app.amrutam.example.com
+  RATE_LIMIT_MAX: '100'
+  RATE_LIMIT_WINDOW_SECONDS: '60'
+  TRUST_PROXY_HOPS: '1'
+  OUTBOX_POLL_INTERVAL_MS: '1000'
+  OUTBOX_MAX_ATTEMPTS: '8'
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318/v1/traces
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+  OTEL_RESOURCE_ATTRIBUTES: deployment.environment=production,service.namespace=amrutam
