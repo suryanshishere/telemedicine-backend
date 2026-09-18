@@ -221,9 +221,11 @@ The committed, generated OpenAPI contract currently describes 25 operations. Err
 
 Idempotency is implemented on booking, availability creation, and prescription creation. Keys are 8-100 URL-safe characters and are scoped to `(user, route, key)`. Same-key/same-body retries replay a completed result; a different body or a duplicate still in `PROCESSING` returns 409. Each row receives an `expires_at` value 24 hours ahead. The claim query atomically replaces an expired row, so the key becomes reusable after that boundary; physical cleanup of old rows remains an operations task. Consultation updates carry `expectedVersion` in the JSON body rather than `If-Match`.
 
+State-changing `PATCH` operations use compare-and-set or explicit same-state handling. A repeated payment transition with the same provider reference returns the current row; a different reference or a stale concurrent transition returns 409. User/doctor activation and availability blocking also short-circuit an already-applied target state.
+
 ## 6. Reliability, retries, transactions, and sagas
 
-- **Inbound guidance:** clients may retry safe reads. A write is retried only with the same idempotency key; authentication, validation, authorization, and domain conflicts are not retryable. The server does not currently perform general request/database retries.
+- **Inbound guidance:** clients may retry safe reads. Create-style critical writes are retried only with the same idempotency key; state transitions are retried with the same target state and concurrency token/reference. Authentication, validation, authorization, and domain conflicts are not retryable. The server does not currently perform general request/database retries.
 - **Database:** idempotent mutations use a `READ COMMITTED` Prisma transaction with a 10-second transaction timeout. Booking resolves contention through a conditional expected-version update and database constraints.
 - **Outbox:** workers claim up to 25 due rows using `FOR UPDATE SKIP LOCKED`, mark them `PROCESSING`, and recover leases older than five minutes. Failure schedules `min(300, 2^attempts) + 0..2` seconds of backoff; the default eighth failure becomes `DEAD_LETTER`.
 - **Adapters:** the reference handler logs dispatch and marks the event `PUBLISHED`. Provider calls, timeouts, circuit breakers, downstream idempotency, and authenticated replay tooling are explicit production integration work.

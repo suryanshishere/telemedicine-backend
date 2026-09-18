@@ -45,6 +45,7 @@ This file records choices made where the assignment is intentionally open-ended.
 - The guarantee is logical at-most-once mutation within the retention window, not magical exactly-once networking. Outbox delivery is at least once, so consumers deduplicate by event ID.
 - Idempotency rows receive an `expiresAt` 24 hours in the future. The claim query atomically replaces an expired row, making its key reusable; no physical cleanup/archive job exists, so table-retention management remains production work.
 - Consultation updates carry `expectedVersion` in the JSON body and return 409 on a stale update; `If-Match` is not implemented. Booking uses an atomic expected-version update rather than a pessimistic row lock.
+- State-changing `PATCH` routes use compare-and-set or explicit same-state behavior rather than create-style keys. Payment retries with the same state/reference return the current row; another reference or a stale concurrent transition returns 409.
 - Notifications and analytics cannot invalidate a committed booking. If a future payment step is made mandatory, it becomes a saga with explicit compensation.
 
 ## Performance and SLO interpretation

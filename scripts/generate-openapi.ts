@@ -1,5 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { format, resolveConfig } from 'prettier';
 
 async function generate(): Promise<void> {
   process.env.SKIP_DATABASE_CONNECT = 'true';
@@ -17,7 +18,9 @@ async function generate(): Promise<void> {
   ]);
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ['error'] });
   const document = buildOpenApi(app);
-  await writeFile('openapi.json', `${JSON.stringify(document, null, 2)}\n`, 'utf8');
+  const prettierConfig = (await resolveConfig('openapi.json')) ?? {};
+  const contents = await format(JSON.stringify(document), { ...prettierConfig, parser: 'json' });
+  await writeFile('openapi.json', contents, 'utf8');
   await app.close();
 }
 

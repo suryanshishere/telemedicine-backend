@@ -175,6 +175,8 @@ Administrators are intentionally excluded from clinical consultation routes; a p
 
 Booking does not depend on a Redis lock. It atomically changes only a slot still in `AVAILABLE` state at the expected version. Database constraints independently reject overlapping doctor slots and more than one active consultation per slot.
 
+State-changing `PATCH` operations use compare-and-set or explicit same-state handling instead of create-style keys. In particular, an identical payment-status retry returns the current payment, a conflicting provider reference returns `409`, and a concurrent stale transition cannot overwrite the winner.
+
 ## Security model
 
 - Passwords use Argon2id; refresh tokens are random, stored only as SHA-256 digests, and rotated on use. Detected reuse revokes every active refresh token for that user.
@@ -187,7 +189,7 @@ See [Security and Threat Model](docs/security.md) for the attack surface, STRIDE
 
 ## Tests and CI
 
-Unit tests exercise encryption/tamper detection, guards, authentication controls, idempotency, state transitions, and booking races. Against migrated PostgreSQL/Redis, the e2e suite verifies operations endpoints and runs the secured doctor registration/MFA/approval, availability/replay, search, patient booking/replay, BOLA denial, consultation transition, prescription/replay, and authorized decrypted-read workflow. CI performs formatting, linting, type checking, coverage, e2e tests, OpenAPI drift detection, a production build, `npm audit`, and HIGH/CRITICAL Trivy scans of the runtime and migration images. Releases must first pass that reusable CI workflow; they publish SBOM/provenance-attested images and render digest-pinned manifests before an optional deploy through the configured GitHub `production` environment.
+The 85 unit tests exercise encryption/tamper detection, guards, authentication controls, idempotency, state transitions, booking races, doctor and user lifecycle rules, payments, analytics, rate-limit degradation, health, and outbox retries/dead letters. Jest enforces a 50% global statement/line floor, 50% branch floor, and 40% function floor; domain services are substantially higher while transport/bootstrap code is primarily exercised by e2e tests. Against migrated PostgreSQL/Redis, the e2e suite verifies operations endpoints and runs the secured doctor registration/MFA/approval, availability/replay, search, patient booking/replay, BOLA denial, consultation transition, prescription/replay, and authorized decrypted-read workflow. CI performs formatting, linting, type checking, coverage, e2e tests, OpenAPI drift detection, a production build, `npm audit`, and HIGH/CRITICAL Trivy scans of the runtime and migration images. Releases must first pass that reusable CI workflow; they publish SBOM/provenance-attested images and render digest-pinned manifests before an optional deploy through the configured GitHub `production` environment.
 
 The load scenario at [`tests/load/booking.js`](tests/load/booking.js) is designed for k6 and checks the assignment's read p95 below 200 ms and write p95 below 500 ms targets. These are validation objectives, not an unsupported claim about an arbitrary laptop.
 

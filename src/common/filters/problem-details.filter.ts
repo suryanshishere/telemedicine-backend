@@ -30,7 +30,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     if (status >= 500) {
       const error = exception instanceof Error ? exception : new Error('Unknown exception');
       this.logger.error(
-        `Unhandled request failure requestId=${request.id ?? 'unknown'} path=${request.originalUrl}`,
+        `Unhandled request failure requestId=${request.id ?? 'unknown'} path=${request.path}`,
         error.stack,
       );
     }

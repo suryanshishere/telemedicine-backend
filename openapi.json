@@ -8,22 +8,12 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/RegisterDto" } }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
+        "responses": { "201": { "description": "" } },
         "summary": "Register a patient or doctor account",
-        "tags": [
-          "authentication"
-        ]
+        "tags": ["authentication"]
       }
     },
     "/v1/auth/login": {
@@ -33,22 +23,12 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LoginDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/LoginDto" } }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
+        "responses": { "200": { "description": "" } },
         "summary": "Authenticate with password and optional TOTP",
-        "tags": [
-          "authentication"
-        ]
+        "tags": ["authentication"]
       }
     },
     "/v1/auth/refresh": {
@@ -58,21 +38,11 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/RefreshDto" } }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "authentication"
-        ]
+        "responses": { "200": { "description": "" } },
+        "tags": ["authentication"]
       }
     },
     "/v1/auth/logout": {
@@ -82,45 +52,21 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/RefreshDto" } }
           }
         },
-        "responses": {
-          "204": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "authentication"
-        ]
+        "responses": { "204": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["authentication"]
       }
     },
     "/v1/auth/mfa/setup": {
       "post": {
         "operationId": "AuthController_setupMfa",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "authentication"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["authentication"]
       }
     },
     "/v1/auth/mfa/verify": {
@@ -130,45 +76,21 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MfaVerifyDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/MfaVerifyDto" } }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "authentication"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["authentication"]
       }
     },
     "/v1/users/me": {
       "get": {
         "operationId": "UsersController_me",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "users"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["users"]
       },
       "patch": {
         "operationId": "UsersController_updateMe",
@@ -176,26 +98,12 @@
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateProfileDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateProfileDto" } }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "users"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["users"]
       }
     },
     "/v1/admin/users": {
@@ -209,11 +117,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
           {
@@ -224,99 +128,43 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
+          { "name": "search", "required": false, "in": "query", "schema": { "type": "string" } },
           {
             "name": "role",
             "required": false,
             "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "PATIENT",
-                "DOCTOR",
-                "ADMIN"
-              ]
-            }
+            "schema": { "type": "string", "enum": ["PATIENT", "DOCTOR", "ADMIN"] }
           },
           {
             "name": "status",
             "required": false,
             "in": "query",
-            "schema": {
-              "type": "string",
-              "enum": [
-                "ACTIVE",
-                "SUSPENDED",
-                "DELETED"
-              ]
-            }
+            "schema": { "type": "string", "enum": ["ACTIVE", "SUSPENDED", "DELETED"] }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "admin"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
       }
     },
     "/v1/admin/users/{id}/status": {
       "patch": {
         "operationId": "AdminUsersController_updateStatus",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateUserStatusDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserStatusDto" } }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "admin"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
       }
     },
     "/v1/admin/audit-logs": {
@@ -330,11 +178,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
           {
@@ -345,11 +189,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
           {
@@ -357,33 +197,18 @@
             "required": false,
             "in": "query",
             "description": "Action prefix, for example auth. or consultation.",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           },
           {
             "name": "resourceType",
             "required": false,
             "in": "query",
-            "schema": {
-              "example": "consultation",
-              "type": "string"
-            }
+            "schema": { "example": "consultation", "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "admin"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
       }
     },
     "/v1/doctors": {
@@ -397,11 +222,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
           {
@@ -412,104 +233,60 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
-          {
-            "name": "search",
-            "required": false,
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
+          { "name": "search", "required": false, "in": "query", "schema": { "type": "string" } },
           {
             "name": "specialization",
             "required": false,
             "in": "query",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           },
           {
             "name": "minFeeCents",
             "required": false,
             "in": "query",
-            "schema": {
-              "type": "number"
-            }
+            "schema": { "type": "number" }
           },
           {
             "name": "maxFeeCents",
             "required": false,
             "in": "query",
-            "schema": {
-              "type": "number"
-            }
+            "schema": { "type": "number" }
           },
           {
             "name": "availableFrom",
             "required": false,
             "in": "query",
             "description": "Only doctors with an available slot at/after this UTC time",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "doctors"
-        ]
+        "responses": { "200": { "description": "" } },
+        "tags": ["doctors"]
       }
     },
     "/v1/doctors/{id}/availability": {
       "get": {
         "operationId": "DoctorsController_availability",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "from",
             "required": true,
             "in": "query",
-            "schema": {
-              "example": "2026-10-01T00:00:00.000Z",
-              "type": "string"
-            }
+            "schema": { "example": "2026-10-01T00:00:00.000Z", "type": "string" }
           },
           {
             "name": "to",
             "required": true,
             "in": "query",
-            "schema": {
-              "example": "2026-11-01T00:00:00.000Z",
-              "type": "string"
-            }
+            "schema": { "example": "2026-11-01T00:00:00.000Z", "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "doctors"
-        ]
+        "responses": { "200": { "description": "" } },
+        "tags": ["doctors"]
       }
     },
     "/v1/doctors/me/availability": {
@@ -520,100 +297,50 @@
             "name": "idempotency-key",
             "required": true,
             "in": "header",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateAvailabilityDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreateAvailabilityDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "doctors"
-        ]
+        "responses": { "201": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["doctors"]
       }
     },
     "/v1/doctors/me/availability/{id}/block": {
       "patch": {
         "operationId": "DoctorsController_blockAvailability",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "doctors"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["doctors"]
       }
     },
     "/v1/admin/doctors/{id}/activation": {
       "patch": {
         "operationId": "AdminDoctorsController_setActive",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateDoctorActivationDto"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateDoctorActivationDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "admin"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
       }
     },
     "/v1/bookings": {
@@ -624,34 +351,18 @@
             "name": "idempotency-key",
             "required": true,
             "in": "header",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BookConsultationDto"
-              }
-            }
+            "application/json": { "schema": { "$ref": "#/components/schemas/BookConsultationDto" } }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "bookings"
-        ]
+        "responses": { "201": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["bookings"]
       }
     },
     "/v1/consultations": {
@@ -665,11 +376,7 @@
             "schema": {
               "minimum": 1,
               "default": 1,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
           {
@@ -680,11 +387,7 @@
               "minimum": 1,
               "maximum": 100,
               "default": 20,
-              "allOf": [
-                {
-                  "$ref": "#/components/schemas/Object"
-                }
-              ]
+              "allOf": [{ "$ref": "#/components/schemas/Object" }]
             }
           },
           {
@@ -693,197 +396,99 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "SCHEDULED",
-                "IN_PROGRESS",
-                "COMPLETED",
-                "CANCELLED",
-                "NO_SHOW"
-              ]
+              "enum": ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"]
             }
           },
           {
             "name": "from",
             "required": false,
             "in": "query",
-            "schema": {
-              "example": "2026-10-01T00:00:00.000Z",
-              "type": "string"
-            }
+            "schema": { "example": "2026-10-01T00:00:00.000Z", "type": "string" }
           },
           {
             "name": "to",
             "required": false,
             "in": "query",
-            "schema": {
-              "example": "2026-11-01T00:00:00.000Z",
-              "type": "string"
-            }
+            "schema": { "example": "2026-11-01T00:00:00.000Z", "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "consultations"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["consultations"]
       }
     },
     "/v1/consultations/{id}": {
       "get": {
         "operationId": "ConsultationsController_get",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "consultations"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["consultations"]
       }
     },
     "/v1/consultations/{id}/status": {
       "patch": {
         "operationId": "ConsultationsController_updateStatus",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateConsultationStatusDto"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdateConsultationStatusDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "consultations"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["consultations"]
       }
     },
     "/v1/consultations/{id}/prescriptions": {
       "post": {
         "operationId": "ConsultationsController_prescribe",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } },
           {
             "name": "idempotency-key",
             "required": true,
             "in": "header",
-            "schema": {
-              "type": "string"
-            }
+            "schema": { "type": "string" }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePrescriptionDto"
-              }
+              "schema": { "$ref": "#/components/schemas/CreatePrescriptionDto" }
             }
           }
         },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "consultations"
-        ]
+        "responses": { "201": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["consultations"]
       }
     },
     "/v1/admin/payments/{id}/status": {
       "patch": {
         "operationId": "PaymentsController_updateStatus",
         "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
+          { "name": "id", "required": true, "in": "path", "schema": { "type": "string" } }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdatePaymentStatusDto"
-              }
+              "schema": { "$ref": "#/components/schemas/UpdatePaymentStatusDto" }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "payments"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["payments"]
       }
     },
     "/v1/admin/analytics": {
@@ -894,62 +499,34 @@
             "name": "from",
             "required": true,
             "in": "query",
-            "schema": {
-              "example": "2026-09-01T00:00:00.000Z",
-              "type": "string"
-            }
+            "schema": { "example": "2026-09-01T00:00:00.000Z", "type": "string" }
           },
           {
             "name": "to",
             "required": true,
             "in": "query",
-            "schema": {
-              "example": "2026-10-01T00:00:00.000Z",
-              "type": "string"
-            }
+            "schema": { "example": "2026-10-01T00:00:00.000Z", "type": "string" }
           }
         ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "tags": [
-          "admin"
-        ]
+        "responses": { "200": { "description": "" } },
+        "security": [{ "bearer": [] }],
+        "tags": ["admin"]
       }
     },
     "/health/live": {
       "get": {
         "operationId": "HealthController_live",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "operations"
-        ]
+        "responses": { "200": { "description": "" } },
+        "tags": ["operations"]
       }
     },
     "/health/ready": {
       "get": {
         "operationId": "HealthController_ready",
         "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "operations"
-        ]
+        "responses": { "200": { "description": "" } },
+        "tags": ["operations"]
       }
     }
   },
@@ -960,161 +537,67 @@
     "contact": {}
   },
   "tags": [],
-  "servers": [
-    {
-      "url": "/"
-    }
-  ],
+  "servers": [{ "url": "/" }],
   "components": {
-    "securitySchemes": {
-      "bearer": {
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "type": "http"
-      }
-    },
+    "securitySchemes": { "bearer": { "scheme": "bearer", "bearerFormat": "JWT", "type": "http" } },
     "schemas": {
       "RegisterDto": {
         "type": "object",
         "properties": {
-          "email": {
-            "type": "string",
-            "example": "patient@example.com"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 12,
-            "example": "Str0ng!Passphrase"
-          },
-          "fullName": {
-            "type": "string",
-            "example": "Aarav Sharma"
-          },
-          "role": {
-            "type": "string",
-            "enum": [
-              "PATIENT",
-              "DOCTOR"
-            ],
-            "default": "PATIENT"
-          },
-          "phone": {
-            "type": "string",
-            "example": "+919876543210"
-          },
-          "specialization": {
-            "type": "string",
-            "example": "Ayurveda"
-          },
-          "licenseNumber": {
-            "type": "string",
-            "example": "MED-12345"
-          },
+          "email": { "type": "string", "example": "patient@example.com" },
+          "password": { "type": "string", "minLength": 12, "example": "Str0ng!Passphrase" },
+          "fullName": { "type": "string", "example": "Aarav Sharma" },
+          "role": { "type": "string", "enum": ["PATIENT", "DOCTOR"], "default": "PATIENT" },
+          "phone": { "type": "string", "example": "+919876543210" },
+          "specialization": { "type": "string", "example": "Ayurveda" },
+          "licenseNumber": { "type": "string", "example": "MED-12345" },
           "consultationFeeCents": {
             "type": "number",
             "example": 150000,
             "description": "Fee in minor currency units (paise)"
           }
         },
-        "required": [
-          "email",
-          "password",
-          "fullName"
-        ]
+        "required": ["email", "password", "fullName"]
       },
       "LoginDto": {
         "type": "object",
         "properties": {
-          "email": {
-            "type": "string",
-            "example": "patient@example.com"
-          },
-          "password": {
-            "type": "string"
-          },
-          "totpCode": {
-            "type": "string",
-            "example": "123456"
-          }
+          "email": { "type": "string", "example": "patient@example.com" },
+          "password": { "type": "string" },
+          "totpCode": { "type": "string", "example": "123456" }
         },
-        "required": [
-          "email",
-          "password"
-        ]
+        "required": ["email", "password"]
       },
       "RefreshDto": {
         "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "refreshToken"
-        ]
+        "properties": { "refreshToken": { "type": "string" } },
+        "required": ["refreshToken"]
       },
       "MfaVerifyDto": {
         "type": "object",
-        "properties": {
-          "code": {
-            "type": "string",
-            "example": "123456"
-          }
-        },
-        "required": [
-          "code"
-        ]
+        "properties": { "code": { "type": "string", "example": "123456" } },
+        "required": ["code"]
       },
       "UpdateProfileDto": {
         "type": "object",
         "properties": {
-          "fullName": {
-            "type": "string",
-            "example": "Aarav Sharma"
-          },
-          "phone": {
-            "type": "string",
-            "example": "+919876543210"
-          },
-          "dateOfBirth": {
-            "type": "string",
-            "example": "1990-01-01"
-          }
+          "fullName": { "type": "string", "example": "Aarav Sharma" },
+          "phone": { "type": "string", "example": "+919876543210" },
+          "dateOfBirth": { "type": "string", "example": "1990-01-01" }
         }
       },
-      "Object": {
-        "type": "object",
-        "properties": {}
-      },
+      "Object": { "type": "object", "properties": {} },
       "UpdateUserStatusDto": {
         "type": "object",
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "ACTIVE",
-              "SUSPENDED",
-              "DELETED"
-            ]
-          }
-        }
+        "properties": { "status": { "type": "string", "enum": ["ACTIVE", "SUSPENDED", "DELETED"] } }
       },
       "CreateAvailabilityDto": {
         "type": "object",
         "properties": {
-          "startsAt": {
-            "type": "string",
-            "example": "2026-10-01T09:00:00.000Z"
-          },
-          "endsAt": {
-            "type": "string",
-            "example": "2026-10-01T09:30:00.000Z"
-          }
+          "startsAt": { "type": "string", "example": "2026-10-01T09:00:00.000Z" },
+          "endsAt": { "type": "string", "example": "2026-10-01T09:30:00.000Z" }
         },
-        "required": [
-          "startsAt",
-          "endsAt"
-        ]
+        "required": ["startsAt", "endsAt"]
       },
       "UpdateDoctorActivationDto": {
         "type": "object",
@@ -1124,97 +607,53 @@
             "description": "Approve or deactivate a verified doctor profile"
           }
         },
-        "required": [
-          "active"
-        ]
+        "required": ["active"]
       },
       "BookConsultationDto": {
         "type": "object",
         "properties": {
-          "slotId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "reason": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 2000
-          }
+          "slotId": { "type": "string", "format": "uuid" },
+          "reason": { "type": "string", "minLength": 3, "maxLength": 2000 }
         },
-        "required": [
-          "slotId",
-          "reason"
-        ]
+        "required": ["slotId", "reason"]
       },
       "UpdateConsultationStatusDto": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "SCHEDULED",
-              "IN_PROGRESS",
-              "COMPLETED",
-              "CANCELLED",
-              "NO_SHOW"
-            ]
+            "enum": ["SCHEDULED", "IN_PROGRESS", "COMPLETED", "CANCELLED", "NO_SHOW"]
           },
           "expectedVersion": {
             "type": "number",
             "description": "Current resource version for optimistic concurrency"
           },
-          "clinicalNotes": {
-            "type": "string",
-            "maxLength": 10000
-          }
+          "clinicalNotes": { "type": "string", "maxLength": 10000 }
         },
-        "required": [
-          "status",
-          "expectedVersion"
-        ]
+        "required": ["status", "expectedVersion"]
       },
-      "MedicationDto": {
-        "type": "object",
-        "properties": {}
-      },
+      "MedicationDto": { "type": "object", "properties": {} },
       "CreatePrescriptionDto": {
         "type": "object",
         "properties": {
           "medications": {
             "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/MedicationDto"
-            }
+            "items": { "$ref": "#/components/schemas/MedicationDto" }
           },
-          "instructions": {
-            "type": "string",
-            "maxLength": 4000
-          }
+          "instructions": { "type": "string", "maxLength": 4000 }
         },
-        "required": [
-          "medications"
-        ]
+        "required": ["medications"]
       },
       "UpdatePaymentStatusDto": {
         "type": "object",
         "properties": {
           "status": {
             "type": "string",
-            "enum": [
-              "PENDING",
-              "AUTHORIZED",
-              "CAPTURED",
-              "REFUNDED",
-              "FAILED"
-            ]
+            "enum": ["PENDING", "AUTHORIZED", "CAPTURED", "REFUNDED", "FAILED"]
           },
-          "providerReference": {
-            "type": "string"
-          }
+          "providerReference": { "type": "string" }
         },
-        "required": [
-          "status"
-        ]
+        "required": ["status"]
       }
     }
   }

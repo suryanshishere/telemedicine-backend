@@ -277,9 +277,9 @@ describe('AdminService analytics', () => {
     await expect(service.analytics({ from: to, to: from })).rejects.toBeInstanceOf(
       BadRequestException,
     );
-    await expect(
-      service.analytics({ from: '2024-01-01T00:00:00.000Z', to }),
-    ).rejects.toThrow('no more than 366 days');
+    await expect(service.analytics({ from: '2024-01-01T00:00:00.000Z', to })).rejects.toThrow(
+      'no more than 366 days',
+    );
     expect(redis.getJson).not.toHaveBeenCalled();
   });
 
@@ -301,9 +301,7 @@ describe('AdminService analytics', () => {
       { status: ConsultationStatus.CANCELLED, _count: { _all: 1 } },
       { status: ConsultationStatus.SCHEDULED, _count: { _all: 1 } },
     ]);
-    prisma.$queryRaw.mockResolvedValue([
-      { day: new Date('2026-09-02T00:00:00.000Z'), total: 5n },
-    ]);
+    prisma.$queryRaw.mockResolvedValue([{ day: new Date('2026-09-02T00:00:00.000Z'), total: 5n }]);
     prisma.payment.aggregate.mockResolvedValue({
       _sum: { amountCents: 45_000 },
       _count: { _all: 3 },
@@ -339,10 +337,6 @@ describe('AdminService analytics', () => {
       _sum: { amountCents: true },
       _count: { _all: true },
     });
-    expect(redis.setJson).toHaveBeenCalledWith(
-      `admin:analytics:${from}:${to}`,
-      result,
-      60,
-    );
+    expect(redis.setJson).toHaveBeenCalledWith(`admin:analytics:${from}:${to}`, result, 60);
   });
 });
