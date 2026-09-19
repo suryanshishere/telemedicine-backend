@@ -2,9 +2,9 @@
 
 NestJS REST API for the Amrutam backend assignment. It supports secure authentication, doctor discovery and availability, consultation booking, prescriptions, payments, audit logs, and admin analytics.
 
-## Demo flow
+## Video Demo flow
 
-Use this section as the presentation path. Open the linked files only as needed.
+[Loom Video Demo Link](https://www.loom.com/share/a58cc4123ac545fe92a5e0d2a47f4afb)
 
 ### 1. System overview
 
