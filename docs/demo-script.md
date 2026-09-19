@@ -1,119 +1,88 @@
-# Five-Minute Demo Script
+# Five-Minute Submission Demo Script
 
-This script demonstrates the evaluation-critical path in five minutes. The seed command creates only the administrator. Before recording, follow the README to register a patient and doctor, enroll MFA for the doctor/admin, activate the doctor, create one future availability slot, and capture the resulting IDs/tokens. Keep a second terminal open for logs and metrics.
+Use this as the exact recording script. Keep the GitHub repository, the successful CI run, Swagger UI, and one terminal visible. Prepare patient, doctor, and administrator tokens plus one future availability slot before recording. Never show passwords, MFA secrets, or encryption keys.
 
-```bash
-export API=http://localhost:3000
-export PATIENT_EMAIL=patient@example.test
-export PATIENT_PASSWORD='<password chosen when the patient was registered>'
-```
+## 0:00-0:35 - Introduction and technology stack
 
-## 0:00-0:30 — Scope and startup
+**Say:**
 
-**Say:** “This is a NestJS modular monolith backed by PostgreSQL. Redis accelerates reads and rate limiting, while committed asynchronous work uses a transactional PostgreSQL outbox. The database—not Redis—prevents double booking.”
+"This is my completed backend submission for a production-oriented telemedicine platform. It is a TypeScript and NestJS modular monolith using PostgreSQL with Prisma for durable data, Redis for caching and distributed rate limiting, and REST APIs documented with OpenAPI. Security uses JWT access tokens, rotating refresh tokens, Argon2id password hashing, TOTP multi-factor authentication, role-based authorization, and AES-256-GCM encryption for clinical data. The project also includes Docker, Kubernetes manifests, GitHub Actions, Prometheus, Grafana, OpenTelemetry, and a PostgreSQL transactional outbox."
 
-Show the README, OpenAPI page, and architecture diagrams. If the stack is not already running:
+**Show:** `README.md`, the architecture diagram in `docs/architecture.md`, and the Swagger page at `/docs`.
 
-```bash
-docker compose up -d --build
-curl -s "$API/health/live"
-curl -s "$API/health/ready"
-```
+**Proof:** The checked-in OpenAPI contract contains 25 operations across 24 paths.
 
-Point out that liveness checks only the process. Readiness requires PostgreSQL; it reports Redis in its checks and returns HTTP 200 with `status: "degraded"` when Redis is unavailable because cache misses and the bounded in-process rate limiter are safe fallbacks.
+## 0:35-1:15 - Authentication, MFA, and authorization
 
-## 0:30-1:10 — Authentication, MFA, and RBAC
+**Say:**
 
-Login with the prepared patient and show the short-lived access/refresh-token response (do not expose a real secret). Briefly show the TOTP setup/verification route for the doctor or admin. Setup keeps a pending encrypted seed until verification and accepted TOTP steps are consumed atomically to prevent replay; recovery codes are not implemented.
+"Patients and doctors can register and log in. Doctors remain inactive until approved by an administrator. Doctor and administrator privileged actions require verified TOTP MFA. Refresh tokens are hashed, rotated, and can be revoked. Guards enforce patient, doctor, and administrator permissions, while validation, rate limiting, secure headers, and Problem Details provide a consistent security boundary."
 
-```bash
-curl -s -X POST "$API/v1/auth/login" \
-  -H 'Content-Type: application/json' \
-  -d "{\"email\":\"$PATIENT_EMAIL\",\"password\":\"$PATIENT_PASSWORD\"}"
+**Show:** Log in as a patient, then call `GET /v1/admin/analytics` with the patient token.
 
-curl -i "$API/v1/admin/analytics" \
-  -H "Authorization: Bearer $PATIENT_TOKEN"
-```
+**Expected proof:** Login succeeds, while the admin endpoint returns `403 Forbidden`. Show the doctor MFA setup and verification endpoints in Swagger, without revealing the TOTP secret.
 
-**Expected:** login succeeds; the patient receives `403` on the admin route. Mention Argon2id password hashing, rotating refresh tokens, role guards, validation, rate limiting, and audit events for sensitive actions.
+## 1:15-2:10 - Doctor discovery, availability, and safe booking
 
-## 1:10-1:50 — Doctor search and availability
+**Say:**
+
+"Patients can search approved doctors by specialization with pagination and view future availability. Doctors create availability in UTC. PostgreSQL exclusion constraints reject overlapping active slots. Booking is safe under concurrency: one transaction conditionally claims an available versioned slot, creates the scheduled consultation and pending payment, writes the audit record, stores the idempotent response, and adds an outbox event. A partial unique database index is the final double-booking backstop."
+
+**Show:** Search doctors, open a doctor's availability, then book a slot using an `Idempotency-Key`. Repeat the identical booking request with the same key.
 
 ```bash
-curl -s "$API/v1/doctors?specialization=Ayurveda&page=1&limit=10"
-
-curl -s "$API/v1/doctors/$DOCTOR_ID/availability?from=2026-09-20T00:00:00Z&to=2026-09-27T00:00:00Z"
-```
-
-Show public filtering and offset pagination (`page`, `limit`, `total`). Doctor-search responses are cached for 30 seconds; the availability endpoint and booking path read PostgreSQL. Note UTC timestamps and the database exclusion constraint that prevents overlapping `AVAILABLE` or `BOOKED` slots.
-
-## 1:50-2:55 — Idempotent, concurrency-safe booking
-
-Book once, then repeat the exact request with the same key:
-
-```bash
-export IDEM=demo-booking-001
 curl -i -X POST "$API/v1/bookings" \
   -H "Authorization: Bearer $PATIENT_TOKEN" \
-  -H "Idempotency-Key: $IDEM" \
-  -H 'Content-Type: application/json' \
-  -d "{\"slotId\":\"$SLOT_ID\",\"reason\":\"Recurring migraine consultation\"}"
-
-curl -i -X POST "$API/v1/bookings" \
-  -H "Authorization: Bearer $PATIENT_TOKEN" \
-  -H "Idempotency-Key: $IDEM" \
-  -H 'Content-Type: application/json' \
-  -d "{\"slotId\":\"$SLOT_ID\",\"reason\":\"Recurring migraine consultation\"}"
+  -H "Idempotency-Key: demo-booking-001" \
+  -H "Content-Type: application/json" \
+  -d "{\"slotId\":\"$SLOT_ID\",\"reason\":\"Recurring migraine\"}"
 ```
 
-**Expected:** the retry returns the same consultation/result with `Idempotency-Replayed: true` and creates no duplicate. If time permits, race two different keys against a fresh slot; exactly one succeeds and the other returns `409` with `Slot is no longer available` in the Problem Details body.
+**Expected proof:** The retry returns the original result with `Idempotency-Replayed: true`; it does not create a second consultation. A competing request for the same slot receives `409 Conflict`.
 
-**Say:** “One transaction atomically updates the slot only if it is still `AVAILABLE` at the version read, then inserts the `SCHEDULED` consultation, `PENDING` payment, audit row, idempotency response, and outbox event. A partial unique index is the final backstop. Workers claim events with `FOR UPDATE SKIP LOCKED`, recover expired leases, retry with capped exponential backoff and jitter, and dead-letter the default eighth failure.”
+## 2:10-2:55 - Consultation, prescription, payment, and privacy
 
-## 2:55-3:40 — Consultation and prescription lifecycle
+**Say:**
 
-As the assigned doctor, advance the consultation and issue a prescription:
+"Only the assigned doctor and patient can access a consultation. The doctor advances it through an explicit state-transition workflow using `expectedVersion` for optimistic concurrency. The assigned doctor can issue one immutable prescription, and the patient can read the decrypted clinical result. Sensitive clinical fields are encrypted with authenticated AES-256-GCM encryption. Payment records are created as pending and updated through protected, idempotent webhook handling. All sensitive actions create append-only audit entries."
 
-```bash
-curl -s -X PATCH "$API/v1/consultations/$CONSULTATION_ID/status" \
-  -H "Authorization: Bearer $DOCTOR_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"status":"IN_PROGRESS","expectedVersion":1,"clinicalNotes":"Assessment recorded securely"}'
+**Show:** Move a consultation from `SCHEDULED` to `IN_PROGRESS`, issue a prescription, and retrieve it as the participating patient. Then attempt access using an unrelated user.
 
-curl -s -X POST "$API/v1/consultations/$CONSULTATION_ID/prescriptions" \
-  -H "Authorization: Bearer $DOCTOR_TOKEN" \
-  -H 'Idempotency-Key: demo-rx-001' \
-  -H 'Content-Type: application/json' \
-  -d '{"medications":[{"name":"Demo medicine","dosage":"1 tablet","frequency":"once daily","duration":"3 days"}],"instructions":"Take after food"}'
-```
+**Expected proof:** Valid participants succeed; an unrelated patient or doctor receives `404`, preventing resource enumeration, and an unauthorized role receives `403`.
 
-Show that an unrelated doctor/patient cannot mutate the consultation. Mention the explicit state-transition matrix, `expectedVersion` concurrency check, one immutable prescription per consultation, AES-256-GCM field encryption, and redaction of credential/MFA fields from logs. Amendment/version history is not implemented.
+## 2:55-3:35 - Reliability and scalability
 
-## 3:40-4:20 — Audit, analytics, and observability
+**Say:**
 
-```bash
-curl -s "$API/v1/admin/audit-logs?resourceType=consultation&page=1&limit=20" \
-  -H "Authorization: Bearer $ADMIN_TOKEN"
+"Committed background work is never dependent on Redis. The transactional outbox stores work in PostgreSQL in the same transaction as the business change. Workers claim events with `FOR UPDATE SKIP LOCKED`, recover expired leases, retry with exponential backoff and jitter, and dead-letter repeated failures. Redis accelerates doctor search and rate limiting, but safe local fallbacks keep the API functional when Redis is unavailable. Database indexes cover the main search and ownership paths. Kubernetes includes separate API and worker deployments, health probes, autoscaling, disruption budgets, non-root containers, and read-only filesystems."
 
-curl -s "$API/v1/admin/analytics?from=2026-09-01T00:00:00Z&to=2026-10-01T00:00:00Z" \
-  -H "Authorization: Bearer $ADMIN_TOKEN"
+**Show:** `src/modules/outbox`, `infra/k8s`, and the health responses.
 
-curl -s "$API/metrics" | grep -E 'amrutam_(http|process|nodejs|outbox)_'
-```
+**Expected proof:** `/health/live` confirms the process is alive; `/health/ready` requires PostgreSQL and reports Redis degradation explicitly.
 
-Show JSON logs correlated by `x-request-id` and one trace if the local collector is enabled. The Prometheus surface includes HTTP request count/duration, default Node.js/process metrics, and `amrutam_outbox_events{status}` counts. Show the Grafana pending/dead-letter panels or the corresponding checked-in alerts. Booking conflicts, cache hits, database-pool wait, oldest-outbox age/retry rate, worker throughput, and security-denial metrics remain follow-up work.
+## 3:35-4:15 - Observability and administration
 
-## 4:20-4:50 — Tests, CI, and infrastructure
+**Say:**
 
-```bash
-npm test
-RUN_E2E=true npm run test:e2e
-```
+"Every request has a correlation ID and structured logs. OpenTelemetry provides traces. Prometheus exposes HTTP latency and request counts, Node.js and process metrics, plus outbox status metrics. Grafana dashboards and Prometheus alerts cover API health and pending or dead-lettered events. Administrators have paginated audit-log search and date-filtered operational analytics."
 
-The e2e suite requires reachable PostgreSQL/Redis and the documented environment variables; without `RUN_E2E=true` it is intentionally skipped. In addition to readiness/OpenAPI/authentication checks, it runs doctor MFA and approval, idempotent availability and booking, participant/admin access denial, consultation transitions, idempotent prescription issue, and the patient's decrypted clinical read. Show CI's formatting, lint, type-check, unit coverage, real migration/e2e run, OpenAPI drift check, build, dependency audit, and runtime/migration image scans. Release invokes that reusable CI workflow before publishing SBOM/provenance-attested images, scans the published digests, renders digest-pinned manifests, and optionally deploys through the GitHub `production` environment. Show the non-root/read-only runtime and Kubernetes reference. Managed secret injection, multi-zone databases, PostgreSQL PITR, the RPO <= 5 minute/RTO <= 60 minute targets, and restore drills are production gates, not capabilities demonstrated by Compose.
+**Show:** `/metrics`, one correlated request log, the Grafana dashboard definition, `GET /v1/admin/audit-logs`, and `GET /v1/admin/analytics`.
 
-## 4:50-5:00 — Close
+## 4:15-4:50 - Automated proof
 
-**Say:** “The implemented critical path combines RBAC and MFA guards, database constraints plus an atomic versioned slot claim, persisted idempotency, encrypted clinical fields, append-only audit rows, and a durable outbox. HTTP/runtime/outbox metrics, structured logs, and traces provide the current observability baseline; the docs label remaining production gates explicitly.”
+**Say:**
 
-If a command fails during the recording, keep the response with its `requestId`, show the matching log entry, and explain the diagnosed cause; do not hide a failing path with pre-recorded output.
+"The repository is continuously verified rather than relying only on this demo. The successful GitHub Actions run performs formatting, linting, type checking, Prisma validation and migrations, deterministic OpenAPI generation, 85 unit tests with enforced coverage thresholds, and a complete PostgreSQL and Redis end-to-end workflow. It also builds the production application and both Docker images, runs the dependency audit, and passes high-and-critical Trivy vulnerability scans."
+
+**Show:**
+
+- Repository: <https://github.com/suryanshishere/telemedicine-backend>
+- Successful CI proof: <https://github.com/suryanshishere/telemedicine-backend/actions/runs/35424501818>
+- Test result: 85 unit tests passed, plus the full integration workflow.
+- Coverage: 54.93% statements, 58.04% branches, 44.30% functions, and 55.59% lines.
+
+## 4:50-5:00 - Closing confirmation
+
+**Say:**
+
+"This completes the requested submission end to end: runnable source code, database schema and migrations, documented APIs, secure authentication and authorization, concurrency-safe booking, consultation and prescription workflows, payment integration, audit and analytics, background processing, caching, observability, automated tests, CI security checks, containerization, Kubernetes infrastructure, architecture and security documentation, and this five-minute proof walkthrough."
