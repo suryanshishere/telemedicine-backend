@@ -171,7 +171,7 @@ jobs:
           cache-from: type=gha
 
       - name: Scan image for HIGH and CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: amrutam-api:ci
           format: table
@@ -181,7 +181,7 @@ jobs:
           severity: HIGH,CRITICAL
 
       - name: Scan migration image for HIGH and CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: amrutam-api:migration-ci
           format: table

@@ -74,7 +74,7 @@ jobs:
           cache-from: type=gha
 
       - name: Scan API image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.names.outputs.api_image }}@${{ steps.build_api.outputs.digest }}
           exit-code: '1'
@@ -82,7 +82,7 @@ jobs:
           severity: HIGH,CRITICAL
 
       - name: Scan migration image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.names.outputs.migration_image }}@${{ steps.build_migration.outputs.digest }}
           exit-code: '1'
