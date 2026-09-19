@@ -1,6 +1,7 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": "..",
+  "reporters": ["<rootDir>/scripts/jest-demo-reporter.cjs"],
   "testEnvironment": "node",
   "testRegex": "test/.*\\.e2e-spec\\.ts$",
   "testTimeout": 30000,

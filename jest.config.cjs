@@ -20,6 +20,7 @@ module.exports = {
   },
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
+  reporters: ['<rootDir>/scripts/jest-demo-reporter.cjs'],
   testEnvironment: 'node',
   testMatch: ['<rootDir>/test/unit/**/*.spec.ts'],
   transform: {
