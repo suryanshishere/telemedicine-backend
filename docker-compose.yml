@@ -81,7 +81,7 @@ services:
       context: .
       target: migration
     image: amrutam-migrations:local
-    command: ['npm', 'run', 'prisma:migrate']
+    command: ['node', 'node_modules/prisma/build/index.js', 'migrate', 'deploy']
     restart: 'no'
     environment:
       <<: *app-environment

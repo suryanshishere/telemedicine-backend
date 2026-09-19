@@ -39,7 +39,7 @@ Create the first administrator, then enroll that account in MFA immediately:
 docker compose run --rm \
   -e SEED_ADMIN_EMAIL=admin@example.test \
   -e SEED_ADMIN_PASSWORD='Change-Me-Now!123' \
-  migrate npm run prisma:seed
+  migrate node node_modules/tsx/dist/cli.mjs prisma/seed.ts
 ```
 
 Local endpoints:

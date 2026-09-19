@@ -31,7 +31,7 @@ spec:
         - name: migrate
           # Built from Dockerfile target "migration"; the pipeline replaces this placeholder tag.
           image: ghcr.io/amrutam/telemedicine-migrations:0.1.0
-          command: ['npm', 'run', 'prisma:migrate']
+          command: ['node', 'node_modules/prisma/build/index.js', 'migrate', 'deploy']
           envFrom:
             - configMapRef:
                 name: amrutam-config

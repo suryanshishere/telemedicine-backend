@@ -29,9 +29,9 @@ jobs:
       api_image: ${{ steps.names.outputs.api_image }}@${{ steps.build_api.outputs.digest }}
       migration_image: ${{ steps.names.outputs.migration_image }}@${{ steps.build_migration.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - name: Resolve lowercase immutable image names
         id: names
@@ -42,7 +42,7 @@ jobs:
           echo "migration_image=${repository}-migrations:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -50,7 +50,7 @@ jobs:
 
       - name: Build and publish API image
         id: build_api
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: runtime
@@ -63,7 +63,7 @@ jobs:
 
       - name: Build and publish migration image
         id: build_migration
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           target: migration
@@ -89,7 +89,7 @@ jobs:
           ignore-unfixed: true
           severity: HIGH,CRITICAL
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
 
       - name: Render immutable deployment manifests
         shell: bash
@@ -108,7 +108,7 @@ jobs:
           grep -Fq "image: ${MIGRATION_IMAGE}" amrutam-release.yaml
 
       - name: Upload deployment manifest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: amrutam-release-${{ github.sha }}
           path: amrutam-release.yaml
@@ -124,11 +124,11 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: amrutam-release-${{ github.sha }}
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@v5
 
       - name: Configure cluster access
         shell: bash
