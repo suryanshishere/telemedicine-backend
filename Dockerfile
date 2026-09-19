@@ -6,7 +6,10 @@ WORKDIR /app
 # Native modules and Prisma's OpenSSL detection both require these on Alpine.
 RUN apk add --no-cache libc6-compat openssl
 
+# npm ci runs the postinstall Prisma generation, so the schema must already be
+# available while keeping application sources out of the dependency layer.
 COPY package.json package-lock.json ./
+COPY prisma/schema.prisma ./prisma/schema.prisma
 RUN --mount=type=cache,target=/root/.npm npm ci
 
 FROM dependencies AS build
